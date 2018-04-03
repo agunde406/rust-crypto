@@ -81,6 +81,9 @@ use simd::{u32x4, u64x2};
 const STATE_LEN: usize = 8;
 const BLOCK_LEN: usize = 16;
 
+const FAMILY_NAME: &str = "supply_chain";
+const AGENT: &str = "ae";
+
 /// Not an intrinsic, but works like an unaligned load.
 #[inline]
 fn sha256load(v2: u32x4, v3: u32x4) -> u32x4 {
@@ -1196,8 +1199,28 @@ static H224: [u32; STATE_LEN] = [
 ];
 
 
+pub fn get_supply_chain_prefix() -> String {
+    hash(&FAMILY_NAME, 6)
+}
+
+pub fn hash(to_hash: &str, num: usize) -> String {
+    let mut sha = Sha512::new();
+    sha.input_str(to_hash);
+    let temp = sha.result_str().to_string();
+    let hash = match temp.get(..num) {
+        Some(x) => x,
+        None => "",
+    };
+    hash.to_string()
+}
+
+pub fn make_agent_address(identifier: &str) -> String {
+    get_supply_chain_prefix() + &AGENT + &hash(identifier, 62)
+}
+
 #[cfg(test)]
 mod tests {
+    use sha2::make_agent_address;
     use cryptoutil::test::test_digest_1million_random;
     use digest::Digest;
     use sha2::{Sha512, Sha384, Sha512Trunc256, Sha512Trunc224, Sha256, Sha224};
@@ -1401,6 +1424,14 @@ mod tests {
             &mut sh,
             64,
             "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0");
+    }
+
+    #[test]
+    fn test_agent() {
+        // This tests panics
+        let andi = make_agent_address("andi");
+        println!("{}",andi);
+
     }
 }
 
